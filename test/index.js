@@ -1,12 +1,15 @@
 
 var parse = require('..');
+var should = require('should');
 
 var fs = require('fs');
 var readdir = fs.readdirSync;
 var path = require('path');
 var basename = path.basename;
 
-readdir('test/cases').forEach(function(file){
+readdir('test/cases')
+.filter(function(fn) { return /\.js$/.test(fn); })
+.forEach(function(file){
   var mod = require(path.resolve('test/cases/' + file));
   var title = basename(file, '.js');
   it('should support ' + title, function(){
