@@ -120,6 +120,26 @@ Parser.prototype.url = function() {
   };
 };
 
+Parser.prototype.var = function() {
+  const m = /^(var\([^)]*\)*) */.exec(this.str);
+  if (!m) return m;
+  this.skip(m[0]);
+  return {
+    type: 'variable',
+    value: m[1],
+  };
+};
+
+Parser.prototype.calc = function() {
+  const m = /^(calc\([^)]*\)*) */.exec(this.str);
+  if (!m) return m;
+  this.skip(m[0]);
+  return {
+    type: 'calc',
+    value: m[1],
+  };
+};
+
 function readToMatchingParen(str) {
   if (str[0] !== '(') {
     throw new Error('expected opening paren');
@@ -165,7 +185,9 @@ Parser.prototype.value = function() {
     || this.number()
     || this.color()
     || this.gradient()
+    || this.calc()
     || this.url()
+    || this.var()
     || this.ident()
     || this.string()
     || this.comma();
