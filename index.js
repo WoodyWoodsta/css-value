@@ -121,50 +121,30 @@ Parser.prototype.url = function() {
 };
 
 Parser.prototype.var = function() {
-  const m = /^(var\([^)]*\)*) */.exec(this.str);
+  const m = /^var/.exec(this.str);
   if (!m) return m;
   this.skip(m[0]);
+
+  const varStr = readToMatchingParen(this.str);
+  this.skip(varStr);
   return {
     type: 'variable',
-    value: m[1],
+    value: m[0] + varStr,
   };
 };
 
 Parser.prototype.calc = function() {
-  const m = /^(calc\([^)]*\)*) */.exec(this.str);
+  const m = /^calc/.exec(this.str);
   if (!m) return m;
   this.skip(m[0]);
+
+  const calcStr = readToMatchingParen(this.str);
+  this.skip(calcStr);
   return {
     type: 'calc',
-    value: m[1],
+    value: m[0] + calcStr,
   };
 };
-
-function readToMatchingParen(str) {
-  if (str[0] !== '(') {
-    throw new Error('expected opening paren');
-  }
-
-  let opens = 0;
-  let i;
-  for (i = 0; i < str.length; i++) {
-    if (str[i] === '(') {
-      opens++;
-    } else if (str[i] === ')') {
-      opens--;
-    }
-
-    if (opens === 0) {
-      break;
-    }
-  }
-
-  if (opens !== 0) {
-    throw new Error('Failed parsing: No matching paren');
-  }
-
-  return str.slice(0, i + 1);
-}
 
 Parser.prototype.gradient = function() {
   const m = /^linear-gradient/.exec(this.str);
@@ -204,3 +184,32 @@ Parser.prototype.parse = function() {
 
   return vals;
 };
+
+
+// === Helpers ===
+
+function readToMatchingParen(str) {
+  if (str[0] !== '(') {
+    throw new Error('expected opening paren');
+  }
+
+  let opens = 0;
+  let i;
+  for (i = 0; i < str.length; i++) {
+    if (str[i] === '(') {
+      opens++;
+    } else if (str[i] === ')') {
+      opens--;
+    }
+
+    if (opens === 0) {
+      break;
+    }
+  }
+
+  if (opens !== 0) {
+    throw new Error('Failed parsing: No matching paren');
+  }
+
+  return str.slice(0, i + 1);
+}
