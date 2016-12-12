@@ -6,184 +6,187 @@ function parse(str) {
   return new Parser(cleanStr).parse();
 }
 
-function Parser(str) {
-  this.str = str;
-}
-
-Parser.prototype.skip = function(m) {
-  this.str = this.str.slice(m.length);
-};
-
-Parser.prototype.comma = function() {
-  const m = /^, */.exec(this.str);
-  if (!m) return;
-  this.skip(m[0]);
-  return { type: 'comma', string: ',' };
-};
-
-Parser.prototype.operator = function() {
-  const m = /^\/ */.exec(this.str);
-  if (!m) return;
-  this.skip(m[0]);
-  return { type: 'operator', value: '/' };
-};
-
-Parser.prototype.ident = function() {
-  const m = /^([\w-]+) */.exec(this.str);
-  if (!m) return;
-  this.skip(m[0]);
-  return {
-    type: 'ident',
-    string: m[1],
-  };
-};
-
-Parser.prototype.int = function() {
-  const m = /^(([-+]?\d+)([^\s\/]+)?) */.exec(this.str);
-  if (!m) return;
-  this.skip(m[0]);
-  const n = ~~m[2];
-  const u = m[3];
-
-  return {
-    type: 'number',
-    string: m[1],
-    unit: u || '',
-    value: n,
-  };
-};
-
-Parser.prototype.float = function() {
-  const m = /^(((?:[-+]?\d+)?\.\d+)([^\s\/]+)?) */.exec(this.str);
-  if (!m) return;
-  this.skip(m[0]);
-  const n = parseFloat(m[2]);
-  const u = m[3];
-
-  return {
-    type: 'number',
-    string: m[1],
-    unit: u || '',
-    value: n,
-  };
-};
-
-Parser.prototype.number = function() {
-  return this.float() || this.int();
-};
-
-Parser.prototype.double = function() {
-  const m = /^"([^"]*)" */.exec(this.str);
-  if (!m) return m;
-  this.skip(m[0]);
-  return {
-    type: 'string',
-    quote: '"',
-    string: `"${m[1]}"`,
-    value: m[1],
-  };
-};
-
-Parser.prototype.single = function() {
-  const m = /^'([^']*)' */.exec(this.str);
-  if (!m) return m;
-  this.skip(m[0]);
-  return {
-    type: 'string',
-    quote: "'",
-    string: `'${m[1]}'`,
-    value: m[1],
-  };
-};
-
-Parser.prototype.string = function() {
-  return this.single() || this.double();
-};
-
-Parser.prototype.color = function() {
-  const m = /^(rgba?\([^)]*\)) */.exec(this.str);
-  if (!m) return m;
-  this.skip(m[0]);
-  return {
-    type: 'color',
-    value: m[1],
-  };
-};
-
-Parser.prototype.url = function() {
-  const m = /^(url\([^)]*\)) */.exec(this.str);
-  if (!m) return m;
-  this.skip(m[0]);
-  return {
-    type: 'url',
-    value: m[1],
-  };
-};
-
-Parser.prototype.var = function() {
-  const m = /^var/.exec(this.str);
-  if (!m) return m;
-  this.skip(m[0]);
-
-  const varStr = readToMatchingParen(this.str);
-  this.skip(varStr);
-  return {
-    type: 'variable',
-    value: m[0] + varStr,
-  };
-};
-
-Parser.prototype.calc = function() {
-  const m = /^calc/.exec(this.str);
-  if (!m) return m;
-  this.skip(m[0]);
-
-  const calcStr = readToMatchingParen(this.str);
-  this.skip(calcStr);
-  return {
-    type: 'calc',
-    value: m[0] + calcStr,
-  };
-};
-
-Parser.prototype.gradient = function() {
-  const m = /^linear-gradient/.exec(this.str);
-  if (!m) return m;
-  this.skip(m[0]);
-
-  const gradientStr = readToMatchingParen(this.str);
-  this.skip(gradientStr);
-  return {
-    type: 'gradient',
-    value: m[0] + gradientStr,
-  };
-};
-
-Parser.prototype.value = function() {
-  this.str = this.str.replace(/^\s+/, '');
-  return this.operator()
-    || this.number()
-    || this.color()
-    || this.gradient()
-    || this.calc()
-    || this.url()
-    || this.var()
-    || this.ident()
-    || this.string()
-    || this.comma();
-};
-
-Parser.prototype.parse = function() {
-  const vals = [];
-
-  while (this.str.length) {
-    const obj = this.value();
-    if (!obj) throw new Error(`failed to parse near '${this.str.slice(0, 10)}...'`);
-    vals.push(obj);
+class Parser {
+  constructor(str) {
+    this.str = str;
   }
 
-  return vals;
-};
+  /**
+   * Parse the string `Parser#string`
+   */
+  parse() {
+    const vals = [];
+
+    while (this.str.length) {
+      const obj = this.value();
+      if (!obj) throw new Error(`failed to parse near '${this.str.slice(0, 10)}...'`);
+      vals.push(obj);
+    }
+
+    return vals;
+  }
+
+  value() {
+    this.str = this.str.replace(/^\s+/, '');
+    return this.operator()
+      || this.number()
+      || this.color()
+      || this.gradient()
+      || this.calc()
+      || this.url()
+      || this.var()
+      || this.ident()
+      || this.string()
+      || this.comma();
+  }
+
+  // Types
+  skip(m) {
+    this.str = this.str.slice(m.length);
+  }
+  comma() {
+    const m = /^, */.exec(this.str);
+    if (!m) return;
+    this.skip(m[0]);
+    return { type: 'comma', string: ',' };
+  }
+  operator() {
+    const m = /^\/ */.exec(this.str);
+    if (!m) return;
+    this.skip(m[0]);
+    return { type: 'operator', value: '/' };
+  }
+
+  ident() {
+    const m = /^([\w-]+) */.exec(this.str);
+    if (!m) return;
+    this.skip(m[0]);
+    return {
+      type: 'ident',
+      string: m[1],
+    };
+  }
+
+  int() {
+    const m = /^(([-+]?\d+)([^\s\/]+)?) */.exec(this.str);
+    if (!m) return;
+    this.skip(m[0]);
+    const n = ~~m[2];
+    const u = m[3];
+
+    return {
+      type: 'number',
+      string: m[1],
+      unit: u || '',
+      value: n,
+    };
+  }
+
+  float() {
+    const m = /^(((?:[-+]?\d+)?\.\d+)([^\s\/]+)?) */.exec(this.str);
+    if (!m) return;
+    this.skip(m[0]);
+    const n = parseFloat(m[2]);
+    const u = m[3];
+
+    return {
+      type: 'number',
+      string: m[1],
+      unit: u || '',
+      value: n,
+    };
+  }
+  number() {
+    return this.float() || this.int();
+  }
+
+  double() {
+    const m = /^"([^"]*)" */.exec(this.str);
+    if (!m) return m;
+    this.skip(m[0]);
+    return {
+      type: 'string',
+      quote: '"',
+      string: `"${m[1]}"`,
+      value: m[1],
+    };
+  }
+
+  single() {
+    const m = /^'([^']*)' */.exec(this.str);
+    if (!m) return m;
+    this.skip(m[0]);
+    return {
+      type: 'string',
+      quote: "'",
+      string: `'${m[1]}'`,
+      value: m[1],
+    };
+  }
+
+  string() {
+    return this.single() || this.double();
+  }
+
+  color() {
+    const m = /^(rgba?\([^)]*\)) */.exec(this.str);
+    if (!m) return m;
+    this.skip(m[0]);
+    return {
+      type: 'color',
+      value: m[1],
+    };
+  }
+
+  url() {
+    const m = /^(url\([^)]*\)) */.exec(this.str);
+    if (!m) return m;
+    this.skip(m[0]);
+    return {
+      type: 'url',
+      value: m[1],
+    };
+  }
+
+  var() {
+    const m = /^var/.exec(this.str);
+    if (!m) return m;
+    this.skip(m[0]);
+
+    const varStr = readToMatchingParen(this.str);
+    this.skip(varStr);
+    return {
+      type: 'variable',
+      value: m[0] + varStr,
+    };
+  }
+
+  calc() {
+    const m = /^calc/.exec(this.str);
+    if (!m) return m;
+    this.skip(m[0]);
+
+    const calcStr = readToMatchingParen(this.str);
+    this.skip(calcStr);
+    return {
+      type: 'calc',
+      value: m[0] + calcStr,
+    };
+  }
+
+  gradient() {
+    const m = /^linear-gradient/.exec(this.str);
+    if (!m) return m;
+    this.skip(m[0]);
+
+    const gradientStr = readToMatchingParen(this.str);
+    this.skip(gradientStr);
+    return {
+      type: 'gradient',
+      value: m[0] + gradientStr,
+    };
+  }
+}
 
 
 // === Helpers ===
